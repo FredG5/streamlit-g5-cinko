@@ -6,7 +6,7 @@ import streamlit_authenticator as stauth
 
 from utils.data import load_data, MESES, get_logo_b64
 from utils.ui import apply_css
-from views.filtros import render_panel_filtros, get_año, get_meses_nombres
+from views.filtros import render_panel_filtros
 from views.estado_resultados import render_shared_header, render_estado_resultados
 from views.flujo_efectivo import render_flujo_efectivo
 from views.balance_general import render_balance_general
@@ -140,39 +140,27 @@ def _show_dashboard(authenticator=None):
     if "sidebar_open" not in st.session_state:
         st.session_state.sidebar_open = True
 
-    if st.session_state.sidebar_open:
-        col_sb, col_main = st.columns([1, 4], gap="large")
+    # Una sola rama de layout. Cuando el panel está cerrado, CSS oculta la columna
+    # de filtros y expande la de contenido sin destruir ni reconstruir el DOM.
+    if not st.session_state.sidebar_open:
+        st.markdown(
+            "<style>"
+            "div[data-testid='stHorizontalBlock']:has(.filtros-header)"
+            ">div[data-testid='stColumn']:first-child{display:none!important;}"
+            "div[data-testid='stHorizontalBlock']:has(.filtros-header)"
+            ">div[data-testid='stColumn']:last-child{flex:1!important;max-width:100%!important;}"
+            "</style>",
+            unsafe_allow_html=True,
+        )
 
-        with col_sb:
-            año, meses_sel_nombres = render_panel_filtros(data, años_disponibles)
+    col_sb, col_main = st.columns([1, 4], gap="large")
 
-        with col_main:
-            meses_sel = resolver_meses(año, meses_sel_nombres)
-            render_shared_header(año, meses_sel, authenticator=authenticator)
-            tab_er, tab_fe, tab_bg, tab_ba = st.tabs([
-                "📊 Estado de Resultados",
-                "💧 Flujo de Efectivo",
-                "📋 Balance General",
-                "📐 Balance Analítico",
-            ])
-            with tab_er:
-                render_estado_resultados(data, año, meses_sel)
-            with tab_fe:
-                render_flujo_efectivo(data, año, meses_sel)
-            with tab_bg:
-                render_balance_general(data, año, meses_sel)
-            with tab_ba:
-                render_balance_analitico(data, año, meses_sel)
+    with col_sb:
+        año, meses_sel_nombres = render_panel_filtros(data, años_disponibles)
 
-    else:
-        año               = get_año(años_disponibles)
-        meses_disp        = sorted(data[data["Año"] == año]["Mes"].unique())
-        nombres_disp      = [MESES[m] for m in meses_disp]
-        meses_sel_nombres = get_meses_nombres(nombres_disp)
-        meses_sel         = resolver_meses(año, meses_sel_nombres)
-
+    with col_main:
+        meses_sel = resolver_meses(año, meses_sel_nombres)
         render_shared_header(año, meses_sel, authenticator=authenticator)
-
         tab_er, tab_fe, tab_bg, tab_ba = st.tabs([
             "📊 Estado de Resultados",
             "💧 Flujo de Efectivo",
