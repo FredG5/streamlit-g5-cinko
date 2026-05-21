@@ -83,14 +83,24 @@ APP_CSS = """
         animation: none !important;
     }
 
-    /* Header card — solo el bloque interno [11,1], no el bloque externo [1,4] */
-    div[data-testid="stHorizontalBlock"] div[data-testid="stHorizontalBlock"]:has(.cinko-header-logo) {
+    /* Header card — aplica al bloque [11,1] en ambos estados del sidebar */
+    div[data-testid="stHorizontalBlock"]:has(.cinko-header-logo) {
         background: white;
         border: 1px solid #e8e8e8;
         border-radius: 10px;
         box-shadow: 0 2px 8px rgba(0,0,0,0.05);
         padding: 18px 24px;
         align-items: center;
+    }
+    /* Cuando el sidebar está abierto, el bloque externo [1,4] también contiene el logo
+       como descendiente — se le revierten los estilos de tarjeta */
+    div[data-testid="stHorizontalBlock"]:has(.cinko-header-logo):has(div[data-testid="stHorizontalBlock"] .cinko-header-logo) {
+        background: transparent !important;
+        border: none !important;
+        border-radius: 0 !important;
+        box-shadow: none !important;
+        padding: 0 !important;
+        align-items: flex-start !important;
     }
 
     /* Panel de filtros */
