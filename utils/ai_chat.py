@@ -64,8 +64,8 @@ def build_financial_context(data, año, meses_sel):
                 denom = abs(pla["utilidad_neta"]) or 1
                 var_u = (pl["utilidad_neta"] - pla["utilidad_neta"]) / denom * 100
                 partes.append(f"  Var vs {año_ant}: Ventas {var_v:+.1f}%, Utilidad {var_u:+.1f}%")
-        except Exception:
-            pass
+        except Exception as e:
+            print(f"[AI] Error mes {mes}: {e}")
 
     # ── P&L acumulado ─────────────────────────────────────────────────────────
     try:
@@ -94,8 +94,8 @@ def build_financial_context(data, año, meses_sel):
             partes.append(f"  Capital Social:     {_fmt(bg['capital_social'])}")
             partes.append(f"  Utilidad Ejercicio: {_fmt(bg['utilidad_ejercicio'])}")
             partes.append(f"  Capital Contable:   {_fmt(bg['capital_contable'])}")
-        except Exception:
-            pass
+        except Exception as e:
+            print(f"[AI] Error mes {mes}: {e}")
 
     # ── Flujo de efectivo mensual ─────────────────────────────────────────────
     partes.append("\n=== FLUJO DE EFECTIVO ===")
@@ -108,8 +108,8 @@ def build_financial_context(data, año, meses_sel):
             partes.append(f"  Inversión Neta:        {_fmt(fe['inv_neta'])}")
             partes.append(f"  Flujo del Periodo:     {_fmt(fe['f_periodo'])}")
             partes.append(f"  Saldo Final:           {_fmt(fe['saldo_fin'])}")
-        except Exception:
-            pass
+        except Exception as e:
+            print(f"[AI] Error mes {mes}: {e}")
 
     return "\n".join(partes)
 
@@ -128,6 +128,7 @@ def get_ai_response(question, financial_context, chat_history):
         return None, "no_key"
 
     try:
+        print(f"[AI] get_ai_response: context_len={len(financial_context)}, question={question[:60]}")
         client = anthropic.Anthropic(api_key=api_key)
         system = _SYSTEM_PROMPT + f"\n\n=== DATOS FINANCIEROS ===\n{financial_context}"
 

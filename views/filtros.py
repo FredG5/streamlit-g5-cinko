@@ -60,14 +60,19 @@ def render_panel_filtros(data, años_disponibles):
     _init_chat()
 
     # Resolver meses numéricos para el contexto
-    nombre_a_num = {MESES[m]: m for m in sorted(data[data["Año"] == año]["Mes"].unique())}
+    meses_disponibles_num = sorted(data[data["Año"] == año]["Mes"].unique())
+    nombre_a_num = {MESES[m]: m for m in meses_disponibles_num}
     meses_num    = sorted([nombre_a_num[n] for n in meses_sel_nombres if n in nombre_a_num])
+    if not meses_num:
+        meses_num = meses_disponibles_num  # fallback: todos los meses disponibles
 
     # Regenerar contexto si cambian los filtros
     ctx_key = f"{año}_" + "_".join(str(m) for m in meses_num)
     if ctx_key != st.session_state.chat_context_key:
+        ctx = build_financial_context(data, año, meses_num)
+        print(f"[AI] Contexto generado: año={año}, meses={meses_num}, len={len(ctx)}")
         st.session_state.chat_context_key = ctx_key
-        st.session_state.chat_context     = build_financial_context(data, año, meses_num)
+        st.session_state.chat_context     = ctx
 
     # Mostrar últimos 6 mensajes del historial
     chat_container = st.container()
