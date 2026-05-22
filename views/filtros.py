@@ -1,5 +1,17 @@
 import streamlit as st
 from utils.data import MESES
+from utils.ai_chat import build_financial_context, get_ai_response, MAX_PREGUNTAS
+
+
+def _init_chat():
+    if "chat_history" not in st.session_state:
+        st.session_state.chat_history = []
+    if "chat_preguntas" not in st.session_state:
+        st.session_state.chat_preguntas = 0
+    if "chat_context_key" not in st.session_state:
+        st.session_state.chat_context_key = ""
+    if "chat_context" not in st.session_state:
+        st.session_state.chat_context = ""
 
 
 def get_año(años_disponibles):
@@ -44,10 +56,65 @@ def render_panel_filtros(data, años_disponibles):
 
     st.divider()
     st.markdown("##### 🤖 Asistente AI")
-    st.markdown("*Próximamente: pregúntale a tus datos*")
-    user_q = st.text_input("Pregunta algo...", placeholder="¿Cuál fue el EBITDA de marzo?")
-    if user_q:
-        st.info("🚧 El asistente de AI se activará en la siguiente versión.")
+
+    _init_chat()
+
+    # Resolver meses numéricos para el contexto
+    nombre_a_num = {MESES[m]: m for m in sorted(data[data["Año"] == año]["Mes"].unique())}
+    meses_num    = sorted([nombre_a_num[n] for n in meses_sel_nombres if n in nombre_a_num])
+
+    # Regenerar contexto si cambian los filtros
+    ctx_key = f"{año}_" + "_".join(str(m) for m in meses_num)
+    if ctx_key != st.session_state.chat_context_key:
+        st.session_state.chat_context_key = ctx_key
+        st.session_state.chat_context     = build_financial_context(data, año, meses_num)
+
+    # Mostrar últimos 6 mensajes del historial
+    chat_container = st.container()
+    with chat_container:
+        for msg in st.session_state.chat_history[-6:]:
+            with st.chat_message(msg["role"]):
+                st.markdown(msg["content"])
+
+    # Contador de consultas
+    st.caption(f"Consultas: {st.session_state.chat_preguntas}/{MAX_PREGUNTAS}")
+
+    # Input de chat
+    restantes = MAX_PREGUNTAS - st.session_state.chat_preguntas
+    if restantes > 0:
+        pregunta = st.chat_input("¿Cuál fue el EBITDA de marzo?", key="chat_input")
+    else:
+        st.info("Has alcanzado el límite de consultas para esta sesión.")
+        pregunta = None
+
+    if pregunta:
+        st.session_state.chat_history.append({"role": "user", "content": pregunta})
+        st.session_state.chat_preguntas += 1
+
+        with chat_container:
+            with st.chat_message("user"):
+                st.markdown(pregunta)
+
+        respuesta, status = get_ai_response(
+            pregunta,
+            st.session_state.chat_context,
+            st.session_state.chat_history[:-1],
+        )
+
+        if status == "ok":
+            content = respuesta
+        elif status == "no_key":
+            content = "El asistente AI aún no está configurado. Contacta al administrador para activarlo."
+        elif status == "auth_error":
+            content = "Error de autenticación con el servicio AI. Verifica la configuración."
+        else:
+            content = "No se pudo obtener respuesta en este momento. Intenta de nuevo."
+
+        st.session_state.chat_history.append({"role": "assistant", "content": content})
+
+        with chat_container:
+            with st.chat_message("assistant"):
+                st.markdown(content)
 
     st.divider()
     st.caption("Última actualización: 31/12/2025")
