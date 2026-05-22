@@ -74,8 +74,8 @@ def render_panel_filtros(data, años_disponibles):
         st.session_state.chat_context_key = ctx_key
         st.session_state.chat_context     = ctx
 
-    # Mostrar últimos 6 mensajes del historial
-    chat_container = st.container()
+    # Mostrar últimos 6 mensajes del historial en contenedor con altura fija
+    chat_container = st.container(height=350, border=False)
     with chat_container:
         for msg in st.session_state.chat_history[-6:]:
             with st.chat_message(msg["role"]):
