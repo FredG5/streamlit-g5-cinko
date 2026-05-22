@@ -89,7 +89,8 @@ def render_panel_filtros(data, años_disponibles):
     with chat_container:
         for msg in st.session_state.chat_history[-6:]:
             with st.chat_message(msg["role"]):
-                st.markdown(msg["content"])
+                # Escapar $ para evitar que Streamlit lo interprete como LaTeX
+                st.markdown(msg["content"].replace("$", r"\$"))
 
     # Contador de consultas
     st.caption(f"Consultas: {st.session_state.chat_preguntas}/{MAX_PREGUNTAS}")
@@ -129,7 +130,7 @@ def render_panel_filtros(data, años_disponibles):
 
         with chat_container:
             with st.chat_message("assistant"):
-                st.markdown(content)
+                st.markdown(content.replace("$", r"\$"))
 
     st.divider()
     st.caption("Última actualización: 31/12/2025")

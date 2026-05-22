@@ -16,7 +16,8 @@ _SYSTEM_PROMPT = (
     "- Utilidad Neta = EBITDA - Producto Financiero - Impuestos\n\n"
     "Reglas de contenido:\n"
     "- Si no puedes responder con los datos disponibles, dilo honestamente.\n"
-    "- Formatea montos en pesos mexicanos con separador de miles (ej: $1,234,567).\n"
+    "- Formatea montos con separador de miles SIN signo de pesos (ej: 1,234,567 MXN). "
+    "NUNCA uses el símbolo $ — el sistema lo interpreta como fórmula matemática.\n"
     "- Cuando sea relevante, menciona variaciones porcentuales vs año anterior.\n"
     "- Responde siempre en español.\n"
     "- Máximo 120 palabras por respuesta. Ve directo al dato.\n\n"
@@ -24,8 +25,8 @@ _SYSTEM_PROMPT = (
     "- No uses encabezados (#, ##, ###).\n"
     "- No uses emojis ni iconos.\n"
     "- No uses tablas markdown.\n"
+    "- No uses negritas (**texto**) ni cursivas (*texto*).\n"
     "- Puedes usar listas con guión (-) solo si son 3 items o menos.\n"
-    "- Puedes usar **negrita** únicamente para destacar el número principal.\n"
     "- El texto se muestra en un panel estrecho; sé breve y directo."
 )
 
