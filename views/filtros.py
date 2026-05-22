@@ -74,8 +74,18 @@ def render_panel_filtros(data, años_disponibles):
         st.session_state.chat_context_key = ctx_key
         st.session_state.chat_context     = ctx
 
-    # Mostrar últimos 6 mensajes del historial en contenedor con altura fija
-    chat_container = st.container(height=350, border=False)
+    # Contenedor de chat con altura dinámica (llena el viewport disponible)
+    st.markdown(
+        "<style>"
+        "div[data-testid='stHorizontalBlock']:has(.filtros-header) "
+        "div[data-testid='stVerticalBlockBorderWrapper']>div{"
+        "height:calc(100vh - 415px)!important;"
+        "min-height:180px!important;"
+        "}"
+        "</style>",
+        unsafe_allow_html=True,
+    )
+    chat_container = st.container(height=600, border=False)
     with chat_container:
         for msg in st.session_state.chat_history[-6:]:
             with st.chat_message(msg["role"]):
