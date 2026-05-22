@@ -57,6 +57,13 @@ def render_panel_filtros(data, años_disponibles):
     st.divider()
     st.markdown("##### 🤖 Asistente AI")
 
+    # Limpiar historial si cambió el usuario en sesión
+    current_user = st.session_state.get("username", "")
+    if st.session_state.get("_chat_user") != current_user:
+        for key in ("chat_history", "chat_preguntas", "chat_context_key", "chat_context"):
+            st.session_state.pop(key, None)
+        st.session_state["_chat_user"] = current_user
+
     _init_chat()
 
     # Resolver meses numéricos para el contexto
