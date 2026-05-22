@@ -11,6 +11,7 @@ from views.estado_resultados import render_shared_header, render_estado_resultad
 from views.flujo_efectivo import render_flujo_efectivo
 from views.balance_general import render_balance_general
 from views.balance_analitico import render_balance_analitico
+from views.ai_dialog import render_ai_button
 
 # ── Activar / desactivar autenticación ───────────────────────────────────────
 AUTH_ENABLED = True
@@ -158,8 +159,9 @@ def _show_dashboard(authenticator=None):
     with col_sb:
         año, meses_sel_nombres = render_panel_filtros(data, años_disponibles)
 
+    meses_sel = resolver_meses(año, meses_sel_nombres)
+
     with col_main:
-        meses_sel = resolver_meses(año, meses_sel_nombres)
         render_shared_header(año, meses_sel, authenticator=authenticator)
         tab_er, tab_fe, tab_bg, tab_ba = st.tabs([
             "📊 Estado de Resultados",
@@ -175,6 +177,9 @@ def _show_dashboard(authenticator=None):
             render_balance_general(data, año, meses_sel)
         with tab_ba:
             render_balance_analitico(data, año, meses_sel)
+
+    # Botón flotante de AI — fuera de columnas para que position:fixed funcione
+    render_ai_button(data, año, meses_sel)
 
 # ── Orquestación principal ────────────────────────────────────────────────────
 if AUTH_ENABLED:
