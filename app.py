@@ -25,7 +25,7 @@ apply_css()
 
 # ── Datos ─────────────────────────────────────────────────────────────────────
 data             = load_data()
-años_disponibles = sorted(data["Año"].unique(), reverse=True)
+años_disponibles = sorted([a for a in data["Año"].unique() if a >= 2025], reverse=True)
 
 # ── Autenticador ──────────────────────────────────────────────────────────────
 _CRED_PATH = Path(__file__).parent / "credentials.yaml"
