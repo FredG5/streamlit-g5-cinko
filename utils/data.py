@@ -1,10 +1,16 @@
 import base64
+import os
 
 import pandas as pd
 import streamlit as st
 from pathlib import Path
 
 _ROOT = Path(__file__).parent.parent
+
+# ── Fuente de datos ───────────────────────────────────────────────────────────
+# "excel"    → lee los archivos Excel locales (comportamiento original, sin cambios)
+# "postgres" → conecta a PostgreSQL via DATABASE_URL y devuelve el mismo DataFrame
+DATA_SOURCE = "excel"
 
 MESES = {
     1: "Enero",      2: "Febrero",   3: "Marzo",      4: "Abril",
@@ -13,11 +19,74 @@ MESES = {
 }
 
 
-@st.cache_data
+# ── Conexión PostgreSQL ───────────────────────────────────────────────────────
+def _pg_conn():
+    """Abre una conexión psycopg2 usando DATABASE_URL (env var o st.secrets)."""
+    import psycopg2
+    url = os.environ.get("DATABASE_URL")
+    if not url:
+        try:
+            url = st.secrets.get("DATABASE_URL", "")
+        except Exception:
+            pass
+    if not url:
+        raise RuntimeError(
+            "DATABASE_URL no configurada. "
+            "Agrégala en .streamlit/secrets.toml o como variable de entorno."
+        )
+    return psycopg2.connect(url)
+
+
+# ── load_data ─────────────────────────────────────────────────────────────────
 def load_data():
+    """Devuelve el DataFrame consolidado (Financieros + Catálogo).
+
+    En ambos modos el DataFrame tiene exactamente las mismas columnas,
+    por lo que todo el código de vistas y cálculos funciona sin cambios.
+    """
+    if DATA_SOURCE == "postgres":
+        return _pg_load_data()
+    return _excel_load_data()
+
+
+@st.cache_data
+def _excel_load_data():
     df  = pd.read_excel(_ROOT / "data" / "Tabla_Financieros_G5.xlsx", sheet_name="Financieros")
     cat = pd.read_excel(_ROOT / "data" / "CatCuentas_G5.xlsx",        sheet_name="Cuentas")
     return df.merge(cat, on="N5 Cuenta", how="left")
+
+
+@st.cache_data(ttl=3600)
+def _pg_load_data():
+    """Carga todo el dataset desde PostgreSQL con los mismos nombres de columna que Excel."""
+    conn = _pg_conn()
+    try:
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT
+                m.año                   AS "Año",
+                m.mes                   AS "Mes",
+                m.n5_cuenta             AS "N5 Cuenta",
+                m.saldo_movimientos_mes AS "Saldo Movimientos del Mes OK",
+                m.saldo_final_mes       AS "Saldo Final de Mes OK",
+                m.saldo_inicial_mes     AS "Saldo Inicial de Mes OK",
+                c.n1_nombre             AS "N1 Nombre Cuenta",
+                c.n2_cuenta             AS "N2 Cuenta",
+                c.n2_nombre             AS "N2 Nombre Cuenta",
+                c.n3_cuenta             AS "N3 Cuenta",
+                c.n3_nombre             AS "N3 Nombre Cuenta",
+                c.n4_cuenta             AS "N4 Cuenta",
+                c.n4_nombre             AS "N4 Nombre Cuenta",
+                c.tipo_cuenta           AS "Resultaods/Balance"
+            FROM movimientos m
+            JOIN catalogo_cuentas c ON m.n5_cuenta = c.n5_cuenta
+            ORDER BY m.año, m.mes, m.n5_cuenta
+        """)
+        rows = cur.fetchall()
+        cols = [desc[0] for desc in cur.description]
+    finally:
+        conn.close()
+    return pd.DataFrame(rows, columns=cols)
 
 
 @st.cache_data
@@ -29,6 +98,7 @@ def get_logo_b64():
 _dfhash = lambda df: df.shape
 
 
+# ── get_pl_month ──────────────────────────────────────────────────────────────
 @st.cache_data(hash_funcs={pd.DataFrame: _dfhash})
 def get_pl_month(data, year, month):
     d   = data[(data["Año"] == year) & (data["Mes"] == month)]

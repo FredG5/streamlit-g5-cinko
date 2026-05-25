@@ -8,3 +8,4 @@ streamlit-authenticator==0.4.2
 PyYAML==6.0.3
 bcrypt==5.0.0
 extra-streamlit-components==0.1.81
+psycopg2-binary
