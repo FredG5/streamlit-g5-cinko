@@ -5,14 +5,6 @@ from utils.data import MESES, get_logo_b64, get_pl_month, get_pl_ytd
 from utils.ui import fmt, fmt_pct, delta_pct, render_kpi
 from views.ai_dialog import open_ai_dialog
 
-_AI_BTN_CSS = (
-    "<style>"
-    # Ocultar el marcador para que no agregue altura y desalinee el botón AI
-    "span#ai-btn-marker{display:none!important;}"
-    "[data-testid='stMarkdownContainer']:has(#ai-btn-marker)"
-    "{display:none!important;height:0!important;margin:0!important;padding:0!important;}"
-    "</style>"
-)
 
 
 def render_shared_header(data, año, meses_sel, authenticator=None):
@@ -44,7 +36,6 @@ def render_shared_header(data, año, meses_sel, authenticator=None):
                 )
 
     st.markdown("<div style='margin-top:8px;'></div>", unsafe_allow_html=True)
-    st.markdown(_AI_BTN_CSS, unsafe_allow_html=True)
 
     c_filtros, c_ai, _ = st.columns([1.8, 1.8, 8.4], vertical_alignment="center")
     with c_filtros:
@@ -53,7 +44,6 @@ def render_shared_header(data, año, meses_sel, authenticator=None):
             st.session_state.sidebar_open = not st.session_state.sidebar_open
             st.rerun()
     with c_ai:
-        st.markdown('<span id="ai-btn-marker"></span>', unsafe_allow_html=True)
         if st.button("🤖 AI", key="ai_btn", use_container_width=True):
             open_ai_dialog(data, año, meses_sel)
 
