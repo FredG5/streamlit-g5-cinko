@@ -5,23 +5,26 @@ from utils.data import MESES, get_logo_b64, get_pl_month, get_pl_ytd
 from utils.ui import fmt, fmt_pct, delta_pct, render_kpi
 from views.ai_dialog import open_ai_dialog
 
-_AI_BTN_CSS = (
-    "<style>"
-    # Ocultar el contenedor del marcador para no desalinear el botón
+_S = (
     "div[data-testid='stColumn']:has(#ai-btn-marker)"
     ":not(:has(div[data-testid='stHorizontalBlock']))"
-    " div[data-testid='stMarkdownContainer']{display:none!important;}"
-    # Estilo del botón AI
-    "div[data-testid='stColumn']:has(#ai-btn-marker)"
-    ":not(:has(div[data-testid='stHorizontalBlock'])) button{"
+)
+_AI_BTN_CSS = (
+    "<style>"
+    # Eliminar espacio del marcador (ambos wrappers posibles)
+    f"{_S} [data-testid='stMarkdown'],"
+    f"{_S} [data-testid='stMarkdownContainer']"
+    "{display:none!important;height:0!important;margin:0!important;padding:0!important;}"
+    # Botón — fondo gradiente
+    f"{_S} button{{"
     "background:linear-gradient(135deg,#1a1a2e 0%,#4361ee 100%)!important;"
     "color:white!important;border:none!important;"
     "box-shadow:0 2px 14px rgba(67,97,238,.45)!important;"
     "transition:box-shadow .2s,transform .15s!important;}"
+    # Texto del botón (el <p> hijo hereda color pero hay reglas más específicas en Streamlit)
+    f"{_S} button p{{color:white!important;}}"
     # Hover
-    "div[data-testid='stColumn']:has(#ai-btn-marker)"
-    ":not(:has(div[data-testid='stHorizontalBlock'])) button:hover{"
-    "box-shadow:0 5px 24px rgba(67,97,238,.7)!important;"
+    f"{_S} button:hover{{box-shadow:0 5px 24px rgba(67,97,238,.7)!important;"
     "transform:translateY(-1px)!important;}"
     "</style>"
 )
@@ -58,7 +61,7 @@ def render_shared_header(data, año, meses_sel, authenticator=None):
     st.markdown("<div style='margin-top:8px;'></div>", unsafe_allow_html=True)
     st.markdown(_AI_BTN_CSS, unsafe_allow_html=True)
 
-    c_filtros, c_ai, _ = st.columns([1.8, 1.8, 8.4])
+    c_filtros, c_ai, _ = st.columns([1.8, 1.8, 8.4], vertical_alignment="center")
     with c_filtros:
         icon = "◀ Filtros" if st.session_state.sidebar_open else "☰ Filtros"
         if st.button(icon, key="toggle_btn", use_container_width=True):
