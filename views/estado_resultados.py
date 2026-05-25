@@ -21,8 +21,8 @@ _AI_BTN_CSS = (
     "color:white!important;border:none!important;"
     "box-shadow:0 2px 14px rgba(67,97,238,.45)!important;"
     "transition:box-shadow .2s,transform .15s!important;}"
-    # Texto — Emotion CSS usa clases con alta especificidad; * gana con data-testid
-    f"{_S} button[data-testid='baseButton-secondary'] *{{color:white!important;}}"
+    # Texto — apuntar a todos los descendientes del button (data-testid puede estar en wrapper externo)
+    f"{_S} button *{{color:white!important;}}"
     # Hover
     f"{_S} button:hover{{box-shadow:0 5px 24px rgba(67,97,238,.7)!important;"
     "transform:translateY(-1px)!important;}"
