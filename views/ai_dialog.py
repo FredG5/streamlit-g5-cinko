@@ -29,14 +29,8 @@ def _init_chat_state(año, meses_sel, data):
         st.session_state.chat_context = ctx
 
 
-@st.dialog("Asistente IA — Grupo Cinko", width="large")
-def open_ai_dialog(data, año, meses_sel):
-    _init_chat_state(año, meses_sel, data)
-
-    nombres = [MESES[m] for m in meses_sel if m in MESES]
-    st.caption(f"Analizando {año} — {', '.join(nombres)}")
-
-    # Historial
+@st.fragment
+def _chat_ui():
     chat_container = st.container(height=380, border=False)
     with chat_container:
         for msg in st.session_state.chat_history[-10:]:
@@ -80,4 +74,14 @@ def open_ai_dialog(data, año, meses_sel):
             content = "No se pudo obtener respuesta. Intenta de nuevo."
 
         st.session_state.chat_history.append({"role": "assistant", "content": content})
-        st.rerun()
+        st.rerun(scope="fragment")
+
+
+@st.dialog("Asistente IA — Grupo Cinko", width="large")
+def open_ai_dialog(data, año, meses_sel):
+    _init_chat_state(año, meses_sel, data)
+
+    nombres = [MESES[m] for m in meses_sel if m in MESES]
+    st.caption(f"Analizando {año} — {', '.join(nombres)}")
+
+    _chat_ui()
