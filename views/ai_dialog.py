@@ -3,22 +3,6 @@ import streamlit as st
 from utils.ai_chat import build_financial_context, get_ai_response, MAX_PREGUNTAS
 from utils.data import MESES
 
-_FLOAT_CSS = (
-    "<style>"
-    "div[data-testid='stMarkdownContainer']:has(#ai-float-anchor)"
-    "+div[data-testid='stButton']{position:fixed;bottom:28px;right:28px;z-index:9999;}"
-    "div[data-testid='stMarkdownContainer']:has(#ai-float-anchor)"
-    "+div[data-testid='stButton'] button{"
-    "border-radius:50%;width:60px;height:60px;padding:0;font-size:1.6rem;"
-    "background:linear-gradient(135deg,#1a1a2e 0%,#2d3561 100%);"
-    "color:white;border:none;box-shadow:0 4px 24px rgba(0,0,0,.5);"
-    "transition:transform .15s,box-shadow .15s;}"
-    "div[data-testid='stMarkdownContainer']:has(#ai-float-anchor)"
-    "+div[data-testid='stButton'] button:hover{"
-    "transform:scale(1.1);box-shadow:0 6px 30px rgba(0,0,0,.6);}"
-    "</style>"
-)
-
 
 def _init_chat_state(año, meses_sel, data):
     defaults = {
@@ -46,7 +30,7 @@ def _init_chat_state(año, meses_sel, data):
 
 
 @st.dialog("Asistente IA — Grupo Cinko", width="large")
-def _ai_dialog(data, año, meses_sel):
+def open_ai_dialog(data, año, meses_sel):
     _init_chat_state(año, meses_sel, data)
 
     nombres = [MESES[m] for m in meses_sel if m in MESES]
@@ -61,7 +45,6 @@ def _ai_dialog(data, año, meses_sel):
 
     st.caption(f"Consultas: {st.session_state.chat_preguntas}/{MAX_PREGUNTAS}")
 
-    # Input via form para que funcione dentro del dialog
     restantes = MAX_PREGUNTAS - st.session_state.chat_preguntas
     if restantes > 0:
         with st.form("ai_chat_form", clear_on_submit=True):
@@ -98,10 +81,3 @@ def _ai_dialog(data, año, meses_sel):
 
         st.session_state.chat_history.append({"role": "assistant", "content": content})
         st.rerun()
-
-
-def render_ai_button(data, año, meses_sel):
-    """Botón flotante en esquina inferior derecha que abre el dialog de AI."""
-    st.markdown(_FLOAT_CSS + '<span id="ai-float-anchor"></span>', unsafe_allow_html=True)
-    if st.button("🤖", key="ai_float_btn"):
-        _ai_dialog(data, año, meses_sel)

@@ -3,9 +3,23 @@ import plotly.graph_objects as go
 
 from utils.data import MESES, get_logo_b64, get_pl_month, get_pl_ytd
 from utils.ui import fmt, fmt_pct, delta_pct, render_kpi
+from views.ai_dialog import open_ai_dialog
+
+_AI_BTN_CSS = (
+    "<style>"
+    "div[data-testid='stColumn']:has(#ai-btn-marker) button{"
+    "background:linear-gradient(135deg,#1a1a2e 0%,#4361ee 100%)!important;"
+    "color:white!important;border:none!important;"
+    "box-shadow:0 2px 14px rgba(67,97,238,.45)!important;"
+    "transition:box-shadow .2s,transform .15s!important;}"
+    "div[data-testid='stColumn']:has(#ai-btn-marker) button:hover{"
+    "box-shadow:0 5px 24px rgba(67,97,238,.7)!important;"
+    "transform:translateY(-1px)!important;}"
+    "</style>"
+)
 
 
-def render_shared_header(año, meses_sel, authenticator=None):
+def render_shared_header(data, año, meses_sel, authenticator=None):
     logo_b64 = get_logo_b64()
 
     col_card, col_menu = st.columns([11, 1], vertical_alignment="center")
@@ -34,10 +48,18 @@ def render_shared_header(año, meses_sel, authenticator=None):
                 )
 
     st.markdown("<div style='margin-top:8px;'></div>", unsafe_allow_html=True)
-    icon = "◀ Filtros" if st.session_state.sidebar_open else "☰ Filtros"
-    if st.button(icon, key="toggle_btn"):
-        st.session_state.sidebar_open = not st.session_state.sidebar_open
-        st.rerun()
+    st.markdown(_AI_BTN_CSS, unsafe_allow_html=True)
+
+    c_filtros, c_ai, _ = st.columns([1.8, 1.8, 8.4])
+    with c_filtros:
+        icon = "◀ Filtros" if st.session_state.sidebar_open else "☰ Filtros"
+        if st.button(icon, key="toggle_btn", use_container_width=True):
+            st.session_state.sidebar_open = not st.session_state.sidebar_open
+            st.rerun()
+    with c_ai:
+        st.markdown('<span id="ai-btn-marker"></span>', unsafe_allow_html=True)
+        if st.button("🤖 AI", key="ai_btn", use_container_width=True):
+            open_ai_dialog(data, año, meses_sel)
 
     if len(meses_sel) == 1:
         periodo_str = f"{MESES[meses_sel[0]]} {año}"
