@@ -160,7 +160,7 @@ def generate_sql(question, año, meses_sel):
     client = anthropic.Anthropic(api_key=api_key)
     resp = client.messages.create(
         model="claude-haiku-4-5",
-        max_tokens=500,
+        max_tokens=1500,
         system=_SQL_SYSTEM + "\n\n" + SCHEMA_CONTEXT,
         messages=[{"role": "user", "content": user_msg}],
     )
