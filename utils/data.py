@@ -10,7 +10,7 @@ _ROOT = Path(__file__).parent.parent
 # ── Fuente de datos ───────────────────────────────────────────────────────────
 # "excel"    → lee los archivos Excel locales (comportamiento original, sin cambios)
 # "postgres" → conecta a PostgreSQL via DATABASE_URL y devuelve el mismo DataFrame
-DATA_SOURCE = "excel"
+DATA_SOURCE = "postgres"
 
 MESES = {
     1: "Enero",      2: "Febrero",   3: "Marzo",      4: "Abril",
@@ -86,7 +86,12 @@ def _pg_load_data():
         cols = [desc[0] for desc in cur.description]
     finally:
         conn.close()
-    return pd.DataFrame(rows, columns=cols)
+    df = pd.DataFrame(rows, columns=cols)
+    # psycopg2 devuelve decimal.Decimal para columnas NUMERIC — convertir a float
+    for col in ["Saldo Movimientos del Mes OK", "Saldo Final de Mes OK", "Saldo Inicial de Mes OK"]:
+        if col in df.columns:
+            df[col] = df[col].astype(float)
+    return df
 
 
 @st.cache_data
