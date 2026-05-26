@@ -1,14 +1,11 @@
 import streamlit as st
 
-from utils.ai_chat import build_financial_context, get_ai_response, MAX_PREGUNTAS
+from utils.ai_chat import get_ai_response, MAX_PREGUNTAS
 from utils.data import MESES
 
 
-def _init_chat_state(año, meses_sel, data):
-    defaults = {
-        "chat_history": [], "chat_preguntas": 0,
-        "chat_context_key": "", "chat_context": "",
-    }
+def _init_chat_state():
+    defaults = {"chat_history": [], "chat_preguntas": 0}
     for k, v in defaults.items():
         if k not in st.session_state:
             st.session_state[k] = v
@@ -20,17 +17,9 @@ def _init_chat_state(año, meses_sel, data):
             st.session_state[k] = defaults[k]
         st.session_state["_chat_user"] = current_user
 
-    # Regenerar contexto si cambian los filtros
-    ctx_key = f"{año}_" + "_".join(str(m) for m in meses_sel)
-    if ctx_key != st.session_state.chat_context_key:
-        ctx = build_financial_context(data, año, meses_sel)
-        print(f"[AI] Contexto: año={año}, meses={meses_sel}, len={len(ctx)}")
-        st.session_state.chat_context_key = ctx_key
-        st.session_state.chat_context = ctx
-
 
 @st.fragment
-def _chat_ui():
+def _chat_ui(año, meses_sel):
     chat_container = st.container(height=380, border=False)
     with chat_container:
         for msg in st.session_state.chat_history[-10:]:
@@ -60,7 +49,8 @@ def _chat_ui():
 
         respuesta, status = get_ai_response(
             pregunta,
-            st.session_state.chat_context,
+            año,
+            meses_sel,
             st.session_state.chat_history[:-1],
         )
 
@@ -79,9 +69,9 @@ def _chat_ui():
 
 @st.dialog("Asistente IA — Grupo Cinko", width="large")
 def open_ai_dialog(data, año, meses_sel):
-    _init_chat_state(año, meses_sel, data)
+    _init_chat_state()
 
     nombres = [MESES[m] for m in meses_sel if m in MESES]
     st.caption(f"Analizando {año} — {', '.join(nombres)}")
 
-    _chat_ui()
+    _chat_ui(año, meses_sel)

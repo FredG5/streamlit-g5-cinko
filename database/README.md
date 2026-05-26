@@ -90,6 +90,26 @@ Ejecutar la app con ambos modos y comparar:
 
 Cuando haya nuevos datos en Excel, volver a correr `migrate.py`. El UPSERT actualiza los registros existentes y agrega los nuevos. La app refresca la caché de postgres cada hora (`ttl=3600`); para forzar el refresco inmediato, reiniciar la app.
 
+## Seguridad — usuario de solo lectura
+
+El usuario de PostgreSQL que usa la app en producción **SOLO debe tener permisos SELECT**. Nunca usar el usuario administrador en la connection string de la app.
+
+En Neon (o cualquier Postgres), crear un usuario de lectura:
+
+```sql
+-- Ejecutar como administrador
+CREATE USER cinko_readonly WITH PASSWORD 'password_seguro';
+GRANT CONNECT ON DATABASE neondb TO cinko_readonly;
+GRANT USAGE ON SCHEMA public TO cinko_readonly;
+GRANT SELECT ON ALL TABLES IN SCHEMA public TO cinko_readonly;
+-- Para tablas futuras:
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO cinko_readonly;
+```
+
+Luego usar la connection string de `cinko_readonly` en `.streamlit/secrets.toml` y Streamlit Cloud.
+
+La validación de SQL en `utils/ai_chat.py` (`execute_safe_query`) es una capa adicional de defensa: verifica que la query sea SELECT y rechaza keywords de escritura/DDL. Nunca se expone el SQL generado al usuario final — solo la respuesta interpretada en lenguaje natural.
+
 ## Estructura de tablas
 
 | Tabla | Filas aprox. | Descripción |
