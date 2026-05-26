@@ -75,6 +75,30 @@ SELECT c.n1_nombre, c.n3_nombre,
 FROM movimientos m JOIN catalogo_cuentas c ON m.n5_cuenta = c.n5_cuenta
 WHERE c.tipo_cuenta = 'Balance' AND m.año = 2025 AND m.mes = 1
 GROUP BY c.n1_nombre, c.n3_nombre;
+
+-- Comparativo de ventas por mes: año actual vs año anterior
+SELECT m.mes,
+  -SUM(CASE WHEN m.año = 2025 THEN m.saldo_movimientos_mes ELSE 0 END) AS ventas_2025,
+  -SUM(CASE WHEN m.año = 2024 THEN m.saldo_movimientos_mes ELSE 0 END) AS ventas_2024,
+  ROUND(
+    (-SUM(CASE WHEN m.año = 2025 THEN m.saldo_movimientos_mes ELSE 0 END)
+     - (-SUM(CASE WHEN m.año = 2024 THEN m.saldo_movimientos_mes ELSE 0 END)))
+    / NULLIF(-SUM(CASE WHEN m.año = 2024 THEN m.saldo_movimientos_mes ELSE 0 END), 0) * 100
+  , 1) AS var_pct
+FROM movimientos m JOIN catalogo_cuentas c ON m.n5_cuenta = c.n5_cuenta
+WHERE c.n1_nombre = 'Ingresos' AND m.mes IN (1, 2, 3)
+GROUP BY m.mes ORDER BY m.mes;
+
+-- Comparativo de EBITDA acumulado: año actual vs año anterior
+SELECT
+  -SUM(CASE WHEN m.año = 2025 AND c.n1_nombre = 'Ingresos' THEN m.saldo_movimientos_mes ELSE 0 END)
+  - SUM(CASE WHEN m.año = 2025 AND c.n1_nombre = 'Costo de Ventas' THEN m.saldo_movimientos_mes ELSE 0 END)
+  - SUM(CASE WHEN m.año = 2025 AND c.n1_nombre = 'Gastos' THEN m.saldo_movimientos_mes ELSE 0 END) AS ebitda_actual,
+  -SUM(CASE WHEN m.año = 2024 AND c.n1_nombre = 'Ingresos' THEN m.saldo_movimientos_mes ELSE 0 END)
+  - SUM(CASE WHEN m.año = 2024 AND c.n1_nombre = 'Costo de Ventas' THEN m.saldo_movimientos_mes ELSE 0 END)
+  - SUM(CASE WHEN m.año = 2024 AND c.n1_nombre = 'Gastos' THEN m.saldo_movimientos_mes ELSE 0 END) AS ebitda_anterior
+FROM movimientos m JOIN catalogo_cuentas c ON m.n5_cuenta = c.n5_cuenta
+WHERE m.mes IN (1, 2, 3);
 """
 
 _SQL_SYSTEM = (
@@ -129,7 +153,7 @@ def generate_sql(question, año, meses_sel):
 
     meses_str = ", ".join(str(m) for m in meses_sel)
     user_msg = (
-        f"El usuario está viendo: año={año}, meses=[{meses_str}]\n\n"
+        f"El usuario está viendo: año actual={año}, año anterior={año - 1}, meses=[{meses_str}]\n\n"
         f"Pregunta: {question}"
     )
 
