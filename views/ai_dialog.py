@@ -66,6 +66,14 @@ def _chat_ui(año, meses_sel):
         st.session_state.chat_history.append({"role": "assistant", "content": content})
         st.rerun(scope="fragment")
 
+    last_sql = st.session_state.get("_ai_last_sql")
+    last_err = st.session_state.get("_ai_last_error")
+    if last_sql:
+        with st.expander("🔍 Debug — última query SQL"):
+            st.code(last_sql, language="sql")
+            if last_err:
+                st.error(f"Error: {last_err}")
+
 
 @st.dialog("Asistente IA — Grupo Cinko", width="large")
 def open_ai_dialog(data, año, meses_sel):

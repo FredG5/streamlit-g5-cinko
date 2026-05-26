@@ -255,10 +255,12 @@ def interpret_results(question, sql_query, columns, rows):
 def get_ai_response(question, año, meses_sel, chat_history):
     """Pipeline de 2 llamadas: genera SQL → ejecuta → interpreta.
     Retorna (texto, status) — misma interfaz de retorno que antes."""
+    _set_debug(sql=None, error=None)
     try:
         # Paso 1: generar SQL
         sql = generate_sql(question, año, meses_sel)
-        print(f"[AI] SQL generado: {sql[:150]}")
+        _set_debug(sql=sql)
+        print(f"[AI] SQL generado: {sql}")
 
         if sql.strip().upper() == "NO_SQL":
             return "No puedo responder esa pregunta con los datos financieros disponibles.", "ok"
@@ -266,6 +268,7 @@ def get_ai_response(question, año, meses_sel, chat_history):
         # Paso 2: ejecutar
         rows, columns, error = execute_safe_query(sql)
         if error:
+            _set_debug(error=error)
             print(f"[AI] Error en query: {error}")
             return "Hubo un error al consultar los datos. Intenta reformular tu pregunta.", "ok"
 
@@ -280,7 +283,20 @@ def get_ai_response(question, año, meses_sel, chat_history):
     except anthropic.AuthenticationError:
         return None, "auth_error"
     except Exception as e:
+        _set_debug(error=str(e))
         return None, f"error: {e}"
+
+
+def _set_debug(sql=None, error=None):
+    try:
+        if sql is not None:
+            st.session_state["_ai_last_sql"] = sql
+        if error is not None:
+            st.session_state["_ai_last_error"] = error
+        elif sql is not None:
+            st.session_state["_ai_last_error"] = None
+    except Exception:
+        pass
 
 
 # ── Legacy — approach anterior con contexto de texto ─────────────────────────
