@@ -139,14 +139,7 @@ def _show_login(authenticator):
 def _show_dashboard(authenticator=None):
     # Splash screen solo en el primer render post-login
     if st.session_state.pop("just_logged_in", False):
-        logo_b64 = get_logo_b64()
-        st.markdown(
-            f'<div class="login-splash">'
-            f'<img src="data:image/jpeg;base64,{logo_b64}" class="splash-logo">'
-            f'<div class="splash-label">Cargando</div>'
-            f'</div>',
-            unsafe_allow_html=True,
-        )
+        st.markdown('<div class="login-splash"></div>', unsafe_allow_html=True)
 
     if "sidebar_open" not in st.session_state:
         st.session_state.sidebar_open = True

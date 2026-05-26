@@ -86,26 +86,8 @@ APP_CSS = """
         inset: 0;
         background: linear-gradient(135deg, #0f0f1a 0%, #1a1a2e 50%, #16213e 100%);
         z-index: 9999;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        gap: 22px;
-        animation: splashFadeOut 1.1s ease-out forwards;
+        animation: splashFadeOut 0.8s ease-out forwards;
         pointer-events: none;
-    }
-    .splash-logo {
-        height: 88px;
-        border-radius: 12px;
-        box-shadow: 0 8px 32px rgba(0,0,0,0.45);
-    }
-    .splash-label {
-        color: rgba(255,255,255,0.65);
-        font-size: 0.78rem;
-        font-weight: 600;
-        letter-spacing: 3px;
-        text-transform: uppercase;
-        font-family: 'Inter', 'Segoe UI', sans-serif;
     }
 
     /* ── Animaciones ──────────────────────────────────────────────────────── */
