@@ -76,7 +76,52 @@ APP_CSS = """
         margin: 20px 0 16px 0; font-size: 1.1rem; font-weight: 600;
     }
 
-    /* Eliminar animación de columnas para que el toggle sea instantáneo */
+    /* ── Animaciones ──────────────────────────────────────────────────────── */
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to   { opacity: 1; }
+    }
+    @keyframes fadeInUp {
+        from { opacity: 0; transform: translateY(8px); }
+        to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Suaviza cada rerun completo (cambio de filtros, toggle panel) */
+    .main .block-container {
+        animation: fadeIn 0.22s ease-out;
+    }
+
+    /* Suaviza el cambio de tab */
+    .stTabs [data-baseweb="tab-panel"] {
+        animation: fadeIn 0.18s ease-out;
+    }
+
+    /* Suaviza la aparición de gráficas Plotly */
+    .js-plotly-plot {
+        animation: fadeIn 0.3s ease-out;
+    }
+
+    /* KPI cards — aparición escalonada en cascada */
+    div[data-testid="stColumn"]:nth-child(1) .kpi-card { animation: fadeInUp 0.3s ease-out 0.00s both; }
+    div[data-testid="stColumn"]:nth-child(2) .kpi-card { animation: fadeInUp 0.3s ease-out 0.07s both; }
+    div[data-testid="stColumn"]:nth-child(3) .kpi-card { animation: fadeInUp 0.3s ease-out 0.14s both; }
+    div[data-testid="stColumn"]:nth-child(4) .kpi-card { animation: fadeInUp 0.3s ease-out 0.21s both; }
+    div[data-testid="stColumn"]:nth-child(5) .kpi-card { animation: fadeInUp 0.3s ease-out 0.28s both; }
+
+    /* Hover suave en botones */
+    .stButton button {
+        transition: opacity 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease !important;
+    }
+
+    /* Hover suave en tabs */
+    .stTabs [data-baseweb="tab"] {
+        transition: color 0.18s ease, border-color 0.18s ease;
+    }
+
+    /* Prevenir salto de scroll en reruns */
+    .main { overflow-anchor: auto; }
+
+    /* Columnas sin animación propia — el fade lo hereda del block-container padre */
     [data-testid="stColumn"],
     [data-testid="stHorizontalBlock"] {
         transition: none !important;
