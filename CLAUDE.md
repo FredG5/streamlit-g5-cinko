@@ -26,7 +26,7 @@ Streamlit G5/
 ├── utils/
 │   ├── data.py                   # Carga de datos, MESES, funciones de cálculo financiero
 │   ├── ui.py                     # CSS global, fmt(), render_kpi(), delta_pct()
-│   └── ai_chat.py                # build_financial_context(), get_ai_response(), _SYSTEM_PROMPT
+│   └── ai_chat.py                # SCHEMA_CONTEXT, generate_sql(), execute_safe_query(), interpret_results(), get_ai_response()
 ├── views/
 │   ├── filtros.py                # Panel de filtros lateral + helpers de session state
 │   ├── estado_resultados.py      # render_shared_header(), render_estado_resultados()
@@ -174,6 +174,23 @@ Gastos en N4: Nóminas, Logística, Gastos de Venta, Gastos Administrativos.
 - `header[data-testid="stHeader"] { height: 0 !important }` elimina la barra de Streamlit.
 - Números en tablas: siempre `fmt(val, prefix="")` — sin signo de pesos en celdas; el símbolo `($ MXN)` se pone en el encabezado de sección.
 
+**Animaciones y transiciones** (todas en `APP_CSS` de `utils/ui.py`):
+- `@keyframes fadeIn` (opacity 0→1) y `@keyframes fadeInUp` (opacity + translateY 8px→0).
+- `.main .block-container { animation: fadeIn 0.22s }` — suaviza cada rerun completo.
+- `.stTabs [data-baseweb="tab-panel"] { animation: fadeIn 0.18s }` — suaviza cambio de tab.
+- `.js-plotly-plot { animation: fadeIn 0.3s }` — suaviza aparición de gráficas.
+- KPI cards: `fadeInUp` escalonado por `nth-child(1..5)` con delays 0→0.28s usando `animation-fill-mode: both`.
+- Hover suave en `.stButton button` y `.stTabs [data-baseweb="tab"]` via `transition`.
+- `[data-testid="stColumn"], [data-testid="stHorizontalBlock"] { animation: none !important }` — previene animaciones propias de columnas; el fade visual lo hereda del block-container padre.
+
+**Splash screen de login** (`app.py` + `utils/ui.py`):
+- Al hacer login, `app.py` pone `st.session_state["just_logged_in"] = True` antes del `st.rerun()`.
+- `_show_dashboard()` consume el flag con `.pop()` e inyecta `<div class="login-splash"></div>`.
+- `.login-splash`: overlay `position:fixed; inset:0; z-index:9999` con el gradiente oscuro del login, animación `splashFadeOut` (opaco 35% → fade 65%) en 0.8s. Cubre el flash blanco de la transición.
+- El flag se consume una sola vez — no aparece en reruns posteriores.
+
+**Gotcha `@st.fragment`**: No se usa en las vistas de tabs. La arquitectura es rerun-completo: los parámetros `data, año, meses_sel` fluyen del panel de filtros hacia abajo en cada rerun. Hacer fragments las vistas sin widgets propios no reduce reruns; hacer fragment los filtros rompería la propagación de estado.
+
 ### Plotly
 
 Cada `st.plotly_chart()` debe llevar un `key=` único para evitar `StreamlitDuplicateElementId`. Convención: `"<vista>_<nombre>_<tipo>"` (ej. `"bg_activos_pie"`, `"fe_flujo_bar"`).
@@ -201,17 +218,31 @@ Para actualizar datos cuando hay nuevos Excel: correr `python database/migrate.p
 
 ### Chat AI (`utils/ai_chat.py` + `views/ai_dialog.py`)
 
-- `build_financial_context(data, año, meses_sel)` — genera un bloque de texto con P&L mensual, P&L YTD, Balance General y Flujo de Efectivo. Se recalcula cuando cambian los filtros.
-- `get_ai_response(question, financial_context, chat_history)` — llama a `claude-haiku-4-5` via Anthropic SDK. Devuelve `(texto, status)` donde status es `"ok"`, `"no_key"`, `"auth_error"` o `"error: <msg>"`.
-- `_SYSTEM_PROMPT` — prohíbe el símbolo `$` en respuestas (usar "MXN"), limita a 120 palabras, sin headers ni emojis ni tablas markdown.
-- El diálogo usa `@st.fragment` + `st.rerun(scope="fragment")` para actualizar el historial sin cerrar el modal.
-- Historial aislado por usuario: se limpia cuando cambia `st.session_state["username"]`.
-- Respuestas muestran con `.replace("$", r"\$")` para evitar renderizado LaTeX en `st.markdown()`.
+Pipeline de dos llamadas a `claude-haiku-4-5`: genera SQL → ejecuta contra PostgreSQL → interpreta en lenguaje natural.
+
+**`utils/ai_chat.py`**:
+- `SCHEMA_CONTEXT` — constante con esquema de BD, reglas de signo financiero y ejemplos de queries (incluyendo comparativos year-over-year con `CASE WHEN m.año = X`).
+- `generate_sql(question, año, meses_sel)` — LLM call 1, `max_tokens=1500`. El `user_msg` incluye `año actual` y `año anterior` explícitamente. Limpia bloques markdown si el modelo los incluye.
+- `execute_safe_query(sql)` — valida que sea SELECT, rechaza múltiples sentencias y keywords DDL/DML con `re.search(rf"\b{kw}\b", ...)`. Ejecuta con `SET statement_timeout = 5000` (5s). Retorna `(rows, columns, error)`.
+- `interpret_results(question, sql, columns, rows)` — LLM call 2, `max_tokens=600`. Formatea hasta 50 filas como tabla de texto.
+- `get_ai_response(question, año, meses_sel, chat_history)` — orquesta el pipeline. Guarda SQL y error en `st.session_state["_ai_last_sql"]` / `["_ai_last_error"]` para el expander de debug.
+- Funciones legacy preservadas con prefijo `_legacy_*` (approach anterior de contexto de texto).
+
+**`views/ai_dialog.py`**:
+- `open_ai_dialog(data, año, meses_sel)` — `@st.dialog` que llama a `_chat_ui(año, meses_sel)`.
+- `_chat_ui(año, meses_sel)` — `@st.fragment` + `st.rerun(scope="fragment")` para actualizar historial sin cerrar el modal.
+- Expander `🔍 Debug — última query SQL` muestra el SQL generado y el error si lo hay (útil para diagnosticar fallos).
+- Historial aislado por usuario via `_chat_user` en session state. Límite: `MAX_PREGUNTAS = 20`.
+- Respuestas con `.replace("$", r"\$")` para evitar renderizado LaTeX.
+
+**Gotcha `max_tokens` SQL**: Queries de comparativo year-over-year con múltiples `CASE WHEN` pueden exceder 500 tokens. `generate_sql` usa `max_tokens=1500`.
 
 ## Próximos pasos (roadmap)
 
-1. ~~**Chat AI conversacional**~~ ✅ Implementado con Claude Haiku via Anthropic SDK
+1. ~~**Chat AI conversacional**~~ ✅ Pipeline SQL: generate_sql → execute → interpret con claude-haiku-4-5
 2. ~~**Migración a PostgreSQL**~~ ✅ Neon.tech + psycopg2, modo dual excel/postgres
-3. ~~**Autenticación de usuarios**~~ ✅ Implementado con streamlit_authenticator
-4. **Vista trimestral** — para presentaciones a consejos directivos
-5. **Deploy en producción** — actualmente en Streamlit Cloud (github.com/FredG5/streamlit-g5-cinko)
+3. ~~**Autenticación de usuarios**~~ ✅ streamlit_authenticator con credentials.yaml
+4. ~~**Transiciones y animaciones UI**~~ ✅ fadeIn/fadeInUp, KPI cascada, splash screen de login
+5. **Vista trimestral** — para presentaciones a consejos directivos
+6. **Deploy en producción** — actualmente en Streamlit Cloud (github.com/FredG5/streamlit-g5-cinko)
+7. **Usuario readonly en PostgreSQL** — documentado en database/README.md, pendiente de crear en Neon
