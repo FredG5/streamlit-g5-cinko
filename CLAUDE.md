@@ -37,11 +37,15 @@ Streamlit G5/
 ├── assets/
 │   └── logo_cinko.jpg            # Logo embebido como base64 en el header
 ├── data/
-│   ├── Tabla_Financieros_G5.xlsx # Datos financieros mensuales por cuenta
+│   ├── Tabla_Financieros_G5.xlsx # Datos financieros mensuales por cuenta (fuente original, aún usado en modo excel)
 │   └── CatCuentas_G5.xlsx        # Catálogo jerárquico de cuentas
+├── database/
+│   ├── schema.sql                # DDL PostgreSQL: catalogo_cuentas + movimientos
+│   ├── migrate.py                # Script de migración Excel → PostgreSQL (idempotente, UPSERT)
+│   └── README.md                 # Instrucciones para Neon, esquema, migración y activación
 ├── credentials.yaml              # Usuarios y hashes para streamlit_authenticator
 ├── .streamlit/
-│   └── secrets.toml              # ANTHROPIC_API_KEY (gitignored, no commitear)
+│   └── secrets.toml              # ANTHROPIC_API_KEY + DATABASE_URL (gitignored, no commitear)
 ├── requirements.txt
 └── CLAUDE.md
 ```
@@ -65,13 +69,22 @@ Panel de filtros personalizado con `st.columns([1, 4], gap="large")` — no usa 
 
 ### Datos (`utils/data.py`)
 
+`DATA_SOURCE = "postgres"` controla la fuente activa. Cambiar a `"excel"` para usar los archivos locales sin necesidad de base de datos.
+
 | Función | Descripción |
 |---|---|
-| `load_data()` | Merge de ambos Excel en `N5 Cuenta`, cacheado con `@st.cache_data` |
+| `load_data()` | Dispatcher: llama a `_excel_load_data()` o `_pg_load_data()` según `DATA_SOURCE` |
+| `_excel_load_data()` | Lee y mergea los Excel, caché permanente |
+| `_pg_load_data()` | Query JOIN en PostgreSQL, devuelve DataFrame con los **mismos nombres de columna** que Excel; caché TTL=3600s |
 | `get_pl_month(data, year, month)` | P&L de un mes usando `Saldo Movimientos del Mes OK` |
 | `get_pl_ytd(data, year, months)` | Acumulado P&L de una lista de meses |
 | `get_balance_general(data, year, snapshot_month)` | Snapshot de balance al cierre del mes; YTD calculado internamente |
 | `get_flujo_mes(data, year, month)` | Flujo de efectivo de un mes — método indirecto |
+
+**Gotcha PostgreSQL**: psycopg2 devuelve `decimal.Decimal` para columnas `NUMERIC`. `_pg_load_data()` convierte los tres campos de saldo a `float` con `.astype(float)` al crear el DataFrame — sin esto, la aritmética falla con `TypeError`.
+
+**Columnas del DataFrame** (idénticas en ambos modos):
+`Año`, `Mes`, `N5 Cuenta`, `Saldo Movimientos del Mes OK`, `Saldo Final de Mes OK`, `Saldo Inicial de Mes OK`, `N1 Nombre Cuenta`, `N2 Cuenta`, `N2 Nombre Cuenta`, `N3 Cuenta`, `N3 Nombre Cuenta`, `N4 Cuenta`, `N4 Nombre Cuenta`, `Resultaods/Balance`
 
 ### Convenciones de signo — P&L
 
@@ -171,13 +184,20 @@ CommonMark cierra bloques HTML en líneas en blanco. Todo el HTML de tablas debe
 
 ### Autenticación
 
-`streamlit_authenticator` con `credentials.yaml`. Habilitada con `AUTH_ENABLED = True` en `app.py`. La API key de Anthropic va en `.streamlit/secrets.toml` como clave raíz (antes de cualquier `[sección]`):
+`streamlit_authenticator` con `credentials.yaml`. Habilitada con `AUTH_ENABLED = True` en `app.py`. El archivo `.streamlit/secrets.toml` tiene tres claves raíz (antes de cualquier `[sección]`):
 ```toml
 ANTHROPIC_API_KEY = "sk-ant-..."
+DATABASE_URL = "postgresql://...?sslmode=require"
 
 [credentials.usernames.admin]
 ...
 ```
+
+### PostgreSQL / Neon
+
+Base de datos en [neon.tech](https://neon.tech). Dos tablas: `catalogo_cuentas` (PK: `n5_cuenta`) y `movimientos` (UNIQUE: `año, mes, n5_cuenta`). Ver `database/README.md` para instrucciones completas.
+
+Para actualizar datos cuando hay nuevos Excel: correr `python database/migrate.py` (UPSERT idempotente). La caché de postgres se refresca cada hora; para forzar refresco inmediato, reiniciar la app.
 
 ### Chat AI (`utils/ai_chat.py` + `views/ai_dialog.py`)
 
@@ -191,7 +211,7 @@ ANTHROPIC_API_KEY = "sk-ant-..."
 ## Próximos pasos (roadmap)
 
 1. ~~**Chat AI conversacional**~~ ✅ Implementado con Claude Haiku via Anthropic SDK
-2. **Migración a PostgreSQL** — reemplazar los archivos Excel como fuente de datos
+2. ~~**Migración a PostgreSQL**~~ ✅ Neon.tech + psycopg2, modo dual excel/postgres
 3. ~~**Autenticación de usuarios**~~ ✅ Implementado con streamlit_authenticator
 4. **Vista trimestral** — para presentaciones a consejos directivos
 5. **Deploy en producción** — actualmente en Streamlit Cloud (github.com/FredG5/streamlit-g5-cinko)
